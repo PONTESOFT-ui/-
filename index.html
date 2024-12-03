@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flying Fly Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #87ceeb;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #score {
+            position: absolute;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            top: 10px;
+            right: 10px;
+        }
+
+        #coins {
+            position: absolute;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            top: 10px;
+            left: 10px;
+        }
+
+        #shop, #musicControl {
+            position: absolute;
+            bottom: 10px;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #shop {
+            right: 10px;
+        }
+
+        #musicControl {
+            right: 150px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="coins">Coins: 0</div>
+    <div id="shop">🛒 Store</div>
+    <div id="musicControl">🎵 Play Music</div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-sunny.mp3"type="audio/mpeg">
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const coinsElement = document.getElementById('coins');
+        const shopButton = document.getElementById('shop');
+        const musicControl = document.getElementById('musicControl');
+        const bgMusic = document.getElementById('bgMusic');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+    let coins = 0;
+    let hearts = 5;
+    let gameStarted = false;
+    let obstacleSpeed = 2; //
+
+        const player = {
+            x: 100,
+            y: canvas.height / 2,
+            width: 30, // Square shape
+            height: 30, // Square shape
+            dy: 0,
+            gravity: 0.1,
+            jumpStrength: -3,
+        };
+
+        const obstacles = [];
+        const coinsList = [];
+
+        function drawPlayer() {
+            ctx.fillStyle = 'yellow';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = 'red';
+            obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function drawCoins() {
+            ctx.fillStyle = 'gold';
+            coinsList.forEach(coin => {
+                ctx.beginPath();
+                ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function updatePlayer() {
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.dy = 0;
+            }
+
+            if (player.y < 0) {
+                player.y = 0;
+                player.dy = 0;
+            }
+        }
+
+        function updateObstacles() {
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= obstacleSpeed; // ثابتة
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    updateScore();
+                }
+
+                if (
+                    player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y
+                ) {
+                    loseLife();
+                }
+            });
+        }
+
+        function updateCoins() {
+            coinsList.forEach((coin, index) => {
+                coin.x -= obstacleSpeed; // ثابتة
+                if (coin.x + 10 < 0) {
+                    coinsList.splice(index, 1);
+                }
+
+                if (
+                    player.x < coin.x + 10 &&
+                    player.x + player.width > coin.x &&
+                    player.y < coin.y + 10 &&
+                    player.y + player.height > coin.y
+                ) {
+                    coinsList.splice(index, 1);
+                    coins++;
+                    updateCoinsDisplay();
+                }
+            });
+        }
+
+        function spawnObstacle() {
+            const size = Math.random() * 40 + 30;
+            const y = Math.random() * (canvas.height - size);
+            obstacles.push({ x: canvas.width, y, width: 30, height: size }); // Square size
+        }
+
+        function spawnCoin() {
+            const y = Math.random() * canvas.height;
+            coinsList.push({ x: canvas.width, y });
+        }
+
+        function updateScore() {
+            scoreElement.textContent = `Score: ${score}`;
+        }
+
+        function updateCoinsDisplay() {
+            coinsElement.textContent = `Coins: ${coins}`;
+        }
+
+        function loseLife() {
+            hearts--;
+            if (hearts === 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+    alert('Game Over!');
+    location.reload(); // إعادة تحميل الصفحة لإعادة بدء اللعبة
+}
+
+        function resetGame() {
+            // Reset player position and stats
+            score = 0;
+            coins = 0;
+            hearts = 3;
+            player.x = 100;
+            player.y = canvas.height / 2;
+            player.dy = 0;
+            updateScore();
+            updateCoinsDisplay();
+            obstacles.length = 0;
+            coinsList.length = 0;
+            gameStarted = false;
+            startGame();
+        }
+
+        function startGame() {
+            gameStarted = true;
+            setInterval(spawnObstacle, 2000);
+            setInterval(spawnCoin, 1000);
+            gameLoop();
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameStarted) {
+                updatePlayer();
+                updateObstacles();
+                updateCoins();
+                drawPlayer();
+                drawObstacles();
+                drawCoins();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function jump() {
+            if (!gameStarted) return;
+            player.dy = player.jumpStrength;
+        }
+
+        shopButton.addEventListener('click', () => {
+            alert(`Welcome to the store! You have ${coins} coins.`);
+        });
+
+        musicControl.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicControl.textContent = '🎵 Music On';
+            } else {
+                bgMusic.pause();
+                musicControl.textContent = '🎵 Music Off';
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp' || event.key === ' ') {
+                jump();
+            }
+        });
+
+        document.addEventListener('touchstart', (event) => {
+            jump();
+        });
+
+        startGame();
+    </script>
+</body>
+</html>
